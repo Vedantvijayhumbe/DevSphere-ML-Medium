@@ -6,12 +6,12 @@ This script is INTERNAL to the CI/CD pipeline.
 Participants do NOT have access to this file.
 It runs from the base repository during PR evaluation.
 
-Scoring (cumulative, max 90 pts):
-  TC-2: Accuracy >= 75%        -> +25 pts
-  TC-3: Accuracy >= 85%        -> +20 pts
-  TC-4: Accuracy >= 90%        -> +15 pts
-  TC-5: Unseen Data >= 80%     -> +20 pts
-  TC-6: No Overfitting         -> +10 pts
+Scoring (cumulative, max 40 pts):
+  TC-2: Accuracy >= 75%        -> +11 pts
+  TC-3: Accuracy >= 85%        -> +9 pts
+  TC-4: Accuracy >= 90%        -> +7 pts
+  TC-5: Unseen Data >= 80%     -> +9 pts
+  TC-6: No Overfitting         -> +4 pts
 """
 
 import os
@@ -39,7 +39,7 @@ RESULTS_MD = "grading_summary.md"
 
 UNSEEN_SEED = 42
 UNSEEN_FRACTION = 0.15  # 15% of test set held out as "unseen"
-MAX_SCORE = 90
+MAX_SCORE = 40
 
 
 # -------------------------------------------------------------------
@@ -199,7 +199,7 @@ def run_accuracy_tests(test_acc, unseen_acc):
     passed = test_acc >= 0.75
     results.append(TestResult(
         "TC-2", "Accuracy >= 75%  (Pipeline Fixed)", passed,
-        25 if passed else 0, 25,
+        11 if passed else 0, 11,
         f"Achieved: {test_acc*100:.2f}%"
     ))
 
@@ -207,7 +207,7 @@ def run_accuracy_tests(test_acc, unseen_acc):
     passed = test_acc >= 0.85
     results.append(TestResult(
         "TC-3", "Accuracy >= 85%  (Good Model)", passed,
-        20 if passed else 0, 20,
+        9 if passed else 0, 9,
         f"Achieved: {test_acc*100:.2f}%"
     ))
 
@@ -215,7 +215,7 @@ def run_accuracy_tests(test_acc, unseen_acc):
     passed = test_acc >= 0.90
     results.append(TestResult(
         "TC-4", "Accuracy >= 90%  (Strong Model)", passed,
-        15 if passed else 0, 15,
+        7 if passed else 0, 7,
         f"Achieved: {test_acc*100:.2f}%"
     ))
 
@@ -223,7 +223,7 @@ def run_accuracy_tests(test_acc, unseen_acc):
     passed = unseen_acc >= 0.80
     results.append(TestResult(
         "TC-5", "Unseen Data >= 80% (Generalization)", passed,
-        20 if passed else 0, 20,
+        9 if passed else 0, 9,
         f"Achieved: {unseen_acc*100:.2f}%"
     ))
 
@@ -232,7 +232,7 @@ def run_accuracy_tests(test_acc, unseen_acc):
     passed = gap <= 0.10
     results.append(TestResult(
         "TC-6", "No Overfitting  (Gap <= 10%)", passed,
-        10 if passed else 0, 10,
+        4 if passed else 0, 4,
         f"Gap: {gap*100:.2f}% ({'OK' if passed else 'OVERFITTING DETECTED'})"
     ))
 
@@ -288,11 +288,11 @@ def format_console(all_results, test_acc, unseen_acc, total_score):
     print(f"  FINAL SCORE: {total_score} / {MAX_SCORE}")
     print("================================================================")
 
-    if total_score >= 80:
+    if total_score >= 36:
         print("  Status: OUTSTANDING -- You are a true Digit Doctor!")
-    elif total_score >= 60:
+    elif total_score >= 27:
         print("  Status: PASS -- Great work! Strong model.")
-    elif total_score >= 25:
+    elif total_score >= 11:
         print("  Status: PASS -- Good start, room to improve!")
     else:
         print("  Status: NEEDS IMPROVEMENT -- Keep debugging!")
@@ -310,11 +310,11 @@ def generate_markdown(all_results, test_acc, unseen_acc, total_score):
     total_count = len(all_results)
     gap = test_acc - unseen_acc
 
-    if total_score >= 80:
+    if total_score >= 36:
         status = "Outstanding"
-    elif total_score >= 60:
+    elif total_score >= 27:
         status = "Pass -- Great Work"
-    elif total_score >= 25:
+    elif total_score >= 11:
         status = "Pass -- Good Start"
     else:
         status = "Needs Improvement"
@@ -353,7 +353,7 @@ def generate_markdown(all_results, test_acc, unseen_acc, total_score):
 """
     if total_score >= MAX_SCORE:
         md += "---\n*Perfect score! You have mastered the Digit Doctor challenge!*\n"
-    elif total_score >= 25:
+    elif total_score >= 11:
         md += "---\n*Keep optimizing to climb the leaderboard!*\n"
     else:
         md += "---\n*The model needs more work. Check the hints in the notebook!*\n"
@@ -372,7 +372,7 @@ def save_results(all_results, test_acc, unseen_acc, total_score, md_summary):
         "unseen_accuracy": round(unseen_acc, 4),
         "total_score": total_score,
         "max_score": MAX_SCORE,
-        "status": "pass" if total_score >= 25 else "fail",
+        "status": "pass" if total_score >= 11 else "fail",
         "test_cases": [r.to_dict() for r in all_results],
     }
 
@@ -472,7 +472,7 @@ def main():
     save_results(all_results, test_acc, unseen_acc, total_score, md)
 
     # Exit code: 0 if minimum threshold met, 1 otherwise
-    sys.exit(0 if total_score >= 25 else 1)
+    sys.exit(0 if total_score >= 11 else 1)
 
 
 if __name__ == "__main__":
