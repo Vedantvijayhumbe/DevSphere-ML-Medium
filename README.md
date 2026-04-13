@@ -35,13 +35,13 @@ Your submission is automatically evaluated when you create a Pull Request:
 
 | Test Case | Threshold | Points | Description |
 |---|---|---|---|
-| TC-2 | Test Accuracy >= 75% | **+25 pts** | Pipeline is fixed and working |
-| TC-3 | Test Accuracy >= 85% | **+20 pts** | Model architecture is solid |
-| TC-4 | Test Accuracy >= 90% | **+15 pts** | Well-optimized model |
-| TC-5 | Unseen Data >= 80% | **+20 pts** | Model generalizes well |
-| TC-6 | No Overfitting | **+10 pts** | Train-test gap <= 10% |
+| TC-2 | Test Accuracy >= 75% | **+11 pts** | Pipeline is fixed and working |
+| TC-3 | Test Accuracy >= 85% | **+9 pts** | Model architecture is solid |
+| TC-4 | Test Accuracy >= 90% | **+7 pts** | Well-optimized model |
+| TC-5 | Unseen Data >= 80% | **+9 pts** | Model generalizes well |
+| TC-6 | No Overfitting | **+4 pts** | Train-test gap <= 10% |
 
-> **Maximum score: 90 points** (cumulative -- earn points for each threshold you clear)
+> **Maximum score: 40 points** (cumulative -- earn points for each threshold you clear)
 
 ### Overfitting Check
 
@@ -105,9 +105,11 @@ Read the code carefully -- look for the HINT and BUG comments. Fix the bugs, opt
 Alternatively, open the notebook directly in **Google Colab**.
 
 ### Step 5: Commit your changes
+Commit message should be in the format - "Your_Roll_Number_CNN model"  
+Ex: "LCI2025001_CNN_model"  
 ```bash
 git add .
-git commit -m "Fixed and optimized the CNN model"
+git commit -m "Your_Roll_Number_CNN model"
 git push origin main
 ```
 
@@ -150,13 +152,13 @@ Digit Doctor -- Evaluation Report
 
 Test Results (6/7 passed)
 
-| TC-2 | Accuracy >= 75%  | Pass | +25 |
-| TC-3 | Accuracy >= 85%  | Pass | +20 |
-| TC-4 | Accuracy >= 90%  | Pass | +15 |
-| TC-5 | Unseen >= 80%    | Pass | +20 |
-| TC-6 | No Overfitting   | Pass | +10 |
+| TC-2 | Accuracy >= 75%  | Pass | +11 |
+| TC-3 | Accuracy >= 85%  | Pass | +9 |
+| TC-4 | Accuracy >= 90%  | Pass | +7 |
+| TC-5 | Unseen >= 80%    | Pass | +9 |
+| TC-6 | No Overfitting   | Pass | +4 |
 
-Score: 90 / 90
+Score: 40/40
 Status: Outstanding -- You are a true Digit Doctor!
 ```
 
