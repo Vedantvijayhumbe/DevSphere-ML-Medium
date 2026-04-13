@@ -169,6 +169,8 @@ Participants are ranked by:
 2. **Test Accuracy** (tiebreaker)
 3. **Submission Time** (earlier is better)
 
+**note that points regarding this might fluctuate after proper reviews from the members at the end of the event, but for the time being this repo contributes 40 pts to your score for completion**
+
 ---
 
 *Built for DevSphere by GDG IIIT Lucknow*
