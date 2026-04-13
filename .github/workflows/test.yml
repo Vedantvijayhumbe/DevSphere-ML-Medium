@@ -1,0 +1,148 @@
+# Digit Doctor -- Automated Grading Workflow
+#
+# This workflow runs ONLY from the base (upstream) repository.
+# It uses pull_request_target so the evaluation script comes
+# from the organizer's repo -- participants cannot see or modify it.
+#
+# Flow:
+#   1. Participant forks repo and fixes the notebook
+#   2. Participant creates a Pull Request
+#   3. This workflow triggers automatically
+#   4. evaluate.py (from base repo) grades the submission
+#   5. Results are posted as a PR comment
+
+name: Grade Submission
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  grade:
+    name: Evaluate Submission
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # Checkout the BASE repo (contains the hidden evaluate.py)
+      - name: Checkout evaluation scripts (base repo)
+        uses: actions/checkout@v4
+        with:
+          path: base-repo
+
+      # Checkout the PARTICIPANT'S code from their PR
+      - name: Checkout participant submission
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          path: submission
+
+      # Setup Python environment
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          cache-dependency-path: submission/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r submission/requirements.txt
+
+      # Run the hidden evaluation script from the base repo
+      - name: Run evaluation
+        working-directory: submission
+        run: python ../base-repo/evaluate.py
+        continue-on-error: true
+        id: evaluate
+
+      # Post results as a PR comment
+      - name: Post results as PR comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body;
+
+            try {
+              body = fs.readFileSync('submission/grading_summary.md', 'utf8');
+            } catch(e) {
+              body = [
+                '## Evaluation Failed',
+                '',
+                'The evaluation script could not complete successfully.',
+                '',
+                '**Common causes:**',
+                '- Notebook has runtime errors',
+                '- Model not saved as `model.h5`',
+                '- Missing dependencies',
+                '',
+                'Please check the Actions log for details.',
+              ].join('\n');
+            }
+
+            // Remove previous grading comments to keep PR clean
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            for (const comment of comments) {
+              if (comment.body && comment.body.includes('Digit Doctor -- Evaluation Report')) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: comment.id,
+                });
+              }
+            }
+
+            // Post new results
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body,
+            });
+
+      # Upload results as downloadable artifact
+      - name: Upload grading artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grading-results-pr-${{ github.event.pull_request.number }}
+          path: |
+            submission/grading_results.json
+            submission/grading_summary.md
+          retention-days: 90
+
+      # Final pass/fail check
+      - name: Check minimum score
+        if: always()
+        run: |
+          if [ -f submission/grading_results.json ]; then
+            SCORE=$(python -c "import json; print(json.load(open('submission/grading_results.json'))['total_score'])")
+            STATUS=$(python -c "import json; print(json.load(open('submission/grading_results.json'))['status'])")
+            echo "==================================="
+            echo "  Score: $SCORE / 90"
+            echo "  Status: $STATUS"
+            echo "==================================="
+            if [ "$STATUS" = "pass" ]; then
+              echo "Submission meets minimum threshold"
+              exit 0
+            else
+              echo "Submission below minimum threshold"
+              exit 1
+            fi
+          else
+            echo "No results file generated -- evaluation failed"
+            exit 1
+          fi
