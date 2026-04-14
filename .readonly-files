@@ -1,0 +1,26 @@
+# =============================================================
+#  Read-only files — participants must NOT modify these.
+#  One path per line. Glob patterns not supported.
+#  Lines starting with # are ignored.
+# =============================================================
+
+# CI workflows
+.github/workflows/fork-ci.yml
+.github/workflows/pr-checks.yml
+.github/workflows/pr-grader.yml
+
+# Hook source
+.hooks/pre-commit
+
+# Test infrastructure
+tests/run_tests.sh
+
+# Evaluation script (grading logic — must not be modified)
+evaluate.py
+
+# Dependency list (must stay consistent with the evaluator)
+requirements.txt
+
+# Repo metadata
+README.md
+.readonly-files

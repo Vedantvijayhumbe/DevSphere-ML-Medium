@@ -1,8 +1,7 @@
-# Digit Doctor -- Automated Grading Workflow
+# DEPRECATED — replaced by fork-ci.yml + pr-checks.yml + pr-grader.yml
 #
-# This workflow runs ONLY from the base (upstream) repository.
-# It uses pull_request_target so the evaluation script comes
-# from the organizer's repo -- participants cannot see or modify it.
+# This file is kept for reference only and runs ONLY on manual dispatch.
+# It can be safely deleted once the new workflows are confirmed working.
 #
 # Flow:
 #   1. Participant forks repo and fixes the notebook
@@ -14,8 +13,7 @@
 name: Grade Submission
 
 on:
-  pull_request_target:
-    types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 permissions:
   pull-requests: write

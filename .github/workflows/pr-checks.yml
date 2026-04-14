@@ -1,0 +1,136 @@
+name: PR Checks
+
+# ─────────────────────────────────────────────────────────────
+#  Authoritative evaluation triggered when a participant opens or
+#  updates a PR against the main branch.
+#
+#  Runs in the BASE REPO's context using the fork's code.
+#  Participants cannot tamper with this workflow.
+#
+#  NOTE: pull_request events from forks do NOT have access to
+#  repository secrets — privileged steps (leaderboard API) live
+#  in pr-grader.yml which triggers via workflow_run after this
+#  workflow completes.
+# ─────────────────────────────────────────────────────────────
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  # ── 1. Evaluate ─────────────────────────────────────────────
+  run-tests:
+    name: Run Evaluation
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      passed: ${{ steps.tests.outputs.passed }}
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      # Always use the base repo's evaluator — prevents participants
+      # from substituting a trivially-passing version of evaluate.py.
+      - name: Restore evaluate.py from base main
+        run: |
+          git fetch origin main --depth=1
+          git checkout origin/main -- evaluate.py requirements.txt
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -q -r requirements.txt
+
+      - name: Run evaluation
+        id: tests
+        run: |
+          chmod +x tests/run_tests.sh
+          if bash tests/run_tests.sh; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      # Upload grading report so pr-grader can include it in the PR comment
+      - name: Upload grading results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grading-results
+          path: |
+            grading_results.json
+            grading_summary.md
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ── 2. Read-only file check ─────────────────────────────────
+  check-readonly:
+    name: Read-Only Files
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.check.outputs.passed }}
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check for read-only violations
+        id: check
+        run: |
+          git fetch origin main --depth=1
+
+          VIOLATIONS=""
+          while IFS= read -r entry; do
+            # Strip Windows-style CR if the file has CRLF line endings
+            entry="${entry%$'\r'}"
+            [[ -z "$entry" || "$entry" == \#* ]] && continue
+            if ! git diff --quiet origin/main \
+                   "${{ github.event.pull_request.head.sha }}" \
+                   -- "$entry" 2>/dev/null; then
+              VIOLATIONS="$VIOLATIONS\n  - $entry"
+            fi
+          done < .readonly-files
+
+          if [[ -n "$VIOLATIONS" ]]; then
+            echo "Protected files modified:"
+            printf '%b\n' "$VIOLATIONS"
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "No protected files modified."
+          echo "passed=true" >> "$GITHUB_OUTPUT"
+
+  # ── 3. Save PR metadata for pr-grader.yml ──────────────────
+  #  pr-grader.yml runs via workflow_run and needs the PR number
+  #  and author. We persist them as a short-lived artifact.
+  save-meta:
+    name: Save PR Metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write metadata
+        run: |
+          mkdir pr-meta
+          echo "${{ github.event.number }}"                        > pr-meta/pr-number.txt
+          echo "${{ github.event.pull_request.user.login }}"       > pr-meta/pr-author.txt
+          echo "${{ github.event.pull_request.head.sha }}"         > pr-meta/head-sha.txt
+          echo "${{ github.event.pull_request.commits }}"          > pr-meta/commit-count.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-meta
+          path: pr-meta/
+          retention-days: 1

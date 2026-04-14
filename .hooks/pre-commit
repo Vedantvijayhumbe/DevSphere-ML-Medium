@@ -1,0 +1,43 @@
+#!/bin/sh
+# =============================================================
+#  DevSphere — Pre-commit Hook
+#
+#  Activated with:  git config core.hooksPath .hooks
+#  (run once after cloning — works on Windows, macOS, Linux)
+#
+#  Git executes this through its own bundled sh on every platform,
+#  so no extra tools are required beyond Git itself.
+#
+#  NOTE (ML tasks): The full evaluation runs the notebook end-to-end
+#  and may take several minutes.  To skip the hook on a particular
+#  commit while iterating quickly, use:
+#
+#    git commit --no-verify -m "your message"
+#
+#  CI will still run the authoritative check on your PR.
+# =============================================================
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+RUNNER="$REPO_ROOT/tests/run_tests.sh"
+
+echo ""
+echo "─────────────────────────────────────────────"
+echo "  DevSphere pre-commit: running evaluation…"
+echo "─────────────────────────────────────────────"
+
+if [ ! -f "$RUNNER" ]; then
+  echo "[!] tests/run_tests.sh not found -- skipping."
+  exit 0
+fi
+
+if bash "$RUNNER"; then
+  echo ""
+  echo "[PASS] Evaluation passed. Proceeding with commit."
+  exit 0
+else
+  echo ""
+  echo "[FAIL] Evaluation FAILED. Commit blocked."
+  echo "       Fix your notebook and try again."
+  echo "       Run  bash tests/run_tests.sh  to see details."
+  echo "       Use  git commit --no-verify   to skip this check."
+  exit 1
+fi
