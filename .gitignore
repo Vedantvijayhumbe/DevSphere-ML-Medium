@@ -3,7 +3,6 @@ grading_results.json
 grading_summary.md
 
 # Model files
-*.h5
 *.keras
 *.pb
 saved_model/
